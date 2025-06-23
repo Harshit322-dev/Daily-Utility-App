@@ -1,6 +1,19 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Palette, Download, Trash2, Save, Folder, Eraser } from 'lucide-react';
+import { 
+  Palette, 
+  Download, 
+  Trash2, 
+  Save, 
+  Folder, 
+  Eraser, 
+  Circle, 
+  Square, 
+  Triangle, 
+  Minus,
+  Type,
+  MousePointer
+} from 'lucide-react';
 import { useStore } from '../../store/useStore';
 
 const colors = [
@@ -10,14 +23,20 @@ const colors = [
 
 const brushSizes = [2, 5, 10, 20, 30];
 
+type DrawingTool = 'brush' | 'eraser' | 'line' | 'rectangle' | 'circle' | 'triangle' | 'text';
+
 export const DrawingPad: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentColor, setCurrentColor] = useState('#000000');
   const [brushSize, setBrushSize] = useState(5);
-  const [isEraser, setIsEraser] = useState(false);
+  const [currentTool, setCurrentTool] = useState<DrawingTool>('brush');
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [padName, setPadName] = useState('');
+  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
+  const [showTextInput, setShowTextInput] = useState(false);
+  const [textInput, setTextInput] = useState('');
+  const [textPosition, setTextPosition] = useState({ x: 0, y: 0 });
   const { drawingPads, addDrawingPad, deleteDrawingPad } = useStore();
 
   useEffect(() => {
@@ -98,9 +117,21 @@ export const DrawingPad: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    setIsDrawing(true);
+    setStartPos({ x, y });
+
+    if (currentTool === 'text') {
+      setTextPosition({ x, y });
+      setShowTextInput(true);
+      return;
+    }
+
+    if (currentTool === 'brush' || currentTool === 'eraser') {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      setIsDrawing(true);
+    } else {
+      setIsDrawing(true);
+    }
   };
 
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -114,31 +145,103 @@ export const DrawingPad: React.FC = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    if (isEraser) {
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.strokeStyle = 'rgba(0,0,0,1)';
-    } else {
+    if (currentTool === 'brush') {
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = currentColor;
+      ctx.lineWidth = brushSize;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    } else if (currentTool === 'eraser') {
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.strokeStyle = 'rgba(0,0,0,1)';
+      ctx.lineWidth = brushSize;
+      ctx.lineTo(x, y);
+      ctx.stroke();
     }
-    
-    ctx.lineWidth = brushSize;
-    ctx.lineTo(x, y);
-    ctx.stroke();
   };
 
   const stopDrawing = (e?: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (e) e.preventDefault();
+    
+    if (!isDrawing) return;
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    if (currentTool !== 'brush' && currentTool !== 'eraser' && e) {
+      const { x, y } = getEventPos(e);
+      drawShape(startPos.x, startPos.y, x, y);
+    }
+
     setIsDrawing(false);
     
     // Reset composite operation
+    ctx.globalCompositeOperation = 'source-over';
+  };
+
+  const drawShape = (startX: number, startY: number, endX: number, endY: number) => {
     const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.globalCompositeOperation = 'source-over';
-      }
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.strokeStyle = currentColor;
+    ctx.fillStyle = currentColor;
+    ctx.lineWidth = brushSize;
+
+    switch (currentTool) {
+      case 'line':
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.stroke();
+        break;
+
+      case 'rectangle':
+        const width = endX - startX;
+        const height = endY - startY;
+        ctx.beginPath();
+        ctx.rect(startX, startY, width, height);
+        ctx.stroke();
+        break;
+
+      case 'circle':
+        const radius = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
+        ctx.beginPath();
+        ctx.arc(startX, startY, radius, 0, 2 * Math.PI);
+        ctx.stroke();
+        break;
+
+      case 'triangle':
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
+        ctx.lineTo(startX - (endX - startX), endY);
+        ctx.closePath();
+        ctx.stroke();
+        break;
     }
+  };
+
+  const addText = () => {
+    if (!textInput.trim()) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.fillStyle = currentColor;
+    ctx.font = `${brushSize * 4}px Arial`;
+    ctx.fillText(textInput, textPosition.x, textPosition.y);
+
+    setShowTextInput(false);
+    setTextInput('');
   };
 
   const clearCanvas = () => {
@@ -176,15 +279,48 @@ export const DrawingPad: React.FC = () => {
     link.click();
   };
 
-  const toggleEraser = () => {
-    setIsEraser(!isEraser);
-  };
+  const tools = [
+    { id: 'brush', label: 'Brush', icon: MousePointer },
+    { id: 'eraser', label: 'Eraser', icon: Eraser },
+    { id: 'line', label: 'Line', icon: Minus },
+    { id: 'rectangle', label: 'Rectangle', icon: Square },
+    { id: 'circle', label: 'Circle', icon: Circle },
+    { id: 'triangle', label: 'Triangle', icon: Triangle },
+    { id: 'text', label: 'Text', icon: Type },
+  ];
 
   return (
     <div className="p-3 sm:p-4 lg:p-6 max-w-7xl mx-auto space-y-4 lg:space-y-6">
       {/* Tools */}
       <div className="bg-white/70 backdrop-blur-xl rounded-2xl lg:rounded-3xl p-3 lg:p-4 border border-gray-200/50">
         <div className="flex flex-col space-y-4 lg:space-y-0 lg:flex-row lg:items-center lg:gap-6">
+          {/* Drawing Tools */}
+          <div className="flex items-center space-x-2 lg:space-x-3">
+            <span className="text-xs lg:text-sm font-medium text-gray-700 flex-shrink-0">Tools:</span>
+            <div className="flex space-x-1 lg:space-x-2 overflow-x-auto pb-1">
+              {tools.map((tool) => {
+                const Icon = tool.icon;
+                return (
+                  <motion.button
+                    key={tool.id}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setCurrentTool(tool.id as DrawingTool)}
+                    className={`p-2 lg:p-3 rounded-lg lg:rounded-xl border-2 transition-all flex items-center space-x-1 lg:space-x-2 flex-shrink-0 ${
+                      currentTool === tool.id 
+                        ? 'border-purple-500 bg-purple-50 text-purple-700' 
+                        : 'border-gray-300 hover:border-gray-400 text-gray-700'
+                    }`}
+                    title={tool.label}
+                  >
+                    <Icon className="w-3 h-3 lg:w-4 lg:h-4" />
+                    <span className="hidden sm:inline text-xs lg:text-sm font-medium">{tool.label}</span>
+                  </motion.button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Colors */}
           <div className="flex items-center space-x-2 lg:space-x-3">
             <Palette className="w-4 h-4 lg:w-5 lg:h-5 text-gray-600 flex-shrink-0" />
@@ -192,12 +328,9 @@ export const DrawingPad: React.FC = () => {
               {colors.map((color) => (
                 <button
                   key={color}
-                  onClick={() => {
-                    setCurrentColor(color);
-                    setIsEraser(false);
-                  }}
+                  onClick={() => setCurrentColor(color)}
                   className={`w-6 h-6 lg:w-8 lg:h-8 rounded-full border-2 lg:border-3 transition-all flex-shrink-0 ${
-                    currentColor === color && !isEraser ? 'border-gray-900 scale-110 shadow-lg' : 'border-gray-300'
+                    currentColor === color ? 'border-gray-900 scale-110 shadow-lg' : 'border-gray-300'
                   }`}
                   style={{ backgroundColor: color }}
                 />
@@ -207,7 +340,7 @@ export const DrawingPad: React.FC = () => {
 
           {/* Brush Size */}
           <div className="flex items-center space-x-2 lg:space-x-3">
-            <span className="text-xs lg:text-sm font-medium text-gray-700 flex-shrink-0">Brush:</span>
+            <span className="text-xs lg:text-sm font-medium text-gray-700 flex-shrink-0">Size:</span>
             <div className="flex space-x-1 lg:space-x-2 overflow-x-auto pb-1">
               {brushSizes.map((size) => (
                 <button
@@ -224,23 +357,6 @@ export const DrawingPad: React.FC = () => {
                 </button>
               ))}
             </div>
-          </div>
-
-          {/* Eraser */}
-          <div className="flex items-center space-x-2 lg:space-x-3">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleEraser}
-              className={`px-3 py-2 lg:px-4 lg:py-2 rounded-lg lg:rounded-xl transition-all flex items-center space-x-1 lg:space-x-2 text-sm lg:text-base ${
-                isEraser 
-                  ? 'bg-red-500 text-white shadow-lg' 
-                  : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-              }`}
-            >
-              <Eraser className="w-3 h-3 lg:w-4 lg:h-4" />
-              <span className="hidden sm:inline">Eraser</span>
-            </motion.button>
           </div>
 
           {/* Actions */}
@@ -281,7 +397,7 @@ export const DrawingPad: React.FC = () => {
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 lg:gap-6">
         {/* Canvas */}
         <div className="xl:col-span-3">
-          <div className="bg-white rounded-2xl lg:rounded-3xl p-3 lg:p-4 border border-gray-200/50 shadow-lg">
+          <div className="bg-white rounded-2xl lg:rounded-3xl p-3 lg:p-4 border border-gray-200/50 shadow-lg relative">
             <canvas
               ref={canvasRef}
               onMouseDown={startDrawing}
@@ -293,17 +409,53 @@ export const DrawingPad: React.FC = () => {
               onTouchEnd={stopDrawing}
               onTouchCancel={stopDrawing}
               className={`w-full border border-gray-200 rounded-lg lg:rounded-xl touch-none ${
-                isEraser ? 'cursor-crosshair' : 'cursor-crosshair'
+                currentTool === 'eraser' ? 'cursor-crosshair' : 
+                currentTool === 'text' ? 'cursor-text' : 'cursor-crosshair'
               }`}
               style={{ height: '400px' }}
             />
-            {isEraser && (
-              <div className="mt-2 text-center">
-                <span className="text-sm text-red-600 bg-red-50 px-3 py-1 rounded-full">
-                  Eraser Mode Active
-                </span>
+            
+            {/* Text Input Overlay */}
+            {showTextInput && (
+              <div 
+                className="absolute bg-white border border-gray-300 rounded-lg p-2 shadow-lg z-10"
+                style={{ 
+                  left: textPosition.x + 16, 
+                  top: textPosition.y + 16 
+                }}
+              >
+                <input
+                  type="text"
+                  value={textInput}
+                  onChange={(e) => setTextInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && addText()}
+                  placeholder="Enter text..."
+                  className="px-2 py-1 border border-gray-200 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  autoFocus
+                />
+                <div className="flex space-x-1 mt-2">
+                  <button
+                    onClick={addText}
+                    className="px-2 py-1 bg-purple-500 text-white rounded text-xs hover:bg-purple-600"
+                  >
+                    Add
+                  </button>
+                  <button
+                    onClick={() => setShowTextInput(false)}
+                    className="px-2 py-1 bg-gray-300 text-gray-700 rounded text-xs hover:bg-gray-400"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
+            
+            {/* Tool Status */}
+            <div className="mt-2 text-center">
+              <span className="text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-full">
+                Current Tool: {tools.find(t => t.id === currentTool)?.label}
+              </span>
+            </div>
           </div>
         </div>
 

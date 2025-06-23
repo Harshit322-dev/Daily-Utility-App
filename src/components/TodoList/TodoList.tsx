@@ -30,7 +30,7 @@ const soundOptions = [
   { 
     value: 'bell', 
     label: '🔔 Bell',
-    createAudio: () => {
+    play: () => {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
@@ -46,38 +46,35 @@ const soundOptions = [
       
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.3);
-      
-      return { play: () => Promise.resolve() };
     }
   },
   { 
     value: 'chime', 
     label: '🎵 Chime',
-    createAudio: () => {
+    play: () => {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
       
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
-      oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.1);
-      oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.2);
-      
-      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.4);
-      
-      return { play: () => Promise.resolve() };
+      // Create multiple tones for a chime effect
+      [523, 659, 784].forEach((freq, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + index * 0.1);
+        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime + index * 0.1);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.1 + 0.4);
+        
+        oscillator.start(audioContext.currentTime + index * 0.1);
+        oscillator.stop(audioContext.currentTime + index * 0.1 + 0.4);
+      });
     }
   },
   { 
     value: 'ding', 
     label: '🔊 Ding',
-    createAudio: () => {
+    play: () => {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
@@ -92,32 +89,29 @@ const soundOptions = [
       
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.2);
-      
-      return { play: () => Promise.resolve() };
     }
   },
   { 
     value: 'alert', 
     label: '⚠️ Alert',
-    createAudio: () => {
+    play: () => {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
       
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
-      oscillator.frequency.setValueAtTime(880, audioContext.currentTime + 0.1);
-      oscillator.frequency.setValueAtTime(440, audioContext.currentTime + 0.2);
-      
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-      
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.3);
-      
-      return { play: () => Promise.resolve() };
+      // Create alternating tones for alert effect
+      [440, 880, 440].forEach((freq, index) => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(freq, audioContext.currentTime + index * 0.1);
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + index * 0.1);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + index * 0.1 + 0.1);
+        
+        oscillator.start(audioContext.currentTime + index * 0.1);
+        oscillator.stop(audioContext.currentTime + index * 0.1 + 0.1);
+      });
     }
   }
 ];
@@ -126,7 +120,7 @@ const playNotificationSound = (soundType: string) => {
   try {
     const soundOption = soundOptions.find(s => s.value === soundType);
     if (soundOption) {
-      soundOption.createAudio();
+      soundOption.play();
     }
   } catch (error) {
     console.warn('Could not play notification sound:', error);
