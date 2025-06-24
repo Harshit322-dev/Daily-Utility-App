@@ -6,7 +6,8 @@ import {
   Target, 
   TrendingUp,
   Calendar,
-  Clock
+  Clock,
+  ExternalLink
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { format } from 'date-fns';
@@ -56,16 +57,35 @@ export const Dashboard: React.FC = () => {
     <div className="p-3 sm:p-4 lg:p-6 space-y-6 lg:space-y-8 max-w-7xl mx-auto">
       {/* Welcome Section */}
       <div className="text-center py-4 sm:py-6 lg:py-8">
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2 lg:mb-4"
-        >
-          Welcome to Daily Utility App
-        </motion.h1>
-        <p className="text-gray-600 text-sm sm:text-base lg:text-lg px-4">
-          Your all-in-one productivity suite for {format(new Date(), 'EEEE, MMMM do, yyyy')}
-        </p>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-center lg:space-x-6 space-y-4 lg:space-y-0">
+          <div className="flex-1 lg:text-left">
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-2xl sm:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2 lg:mb-4"
+            >
+              Welcome to Daily Utility App
+            </motion.h1>
+            <p className="text-gray-600 text-sm sm:text-base lg:text-lg px-4 lg:px-0">
+              Your all-in-one productivity suite for {format(new Date(), 'EEEE, MMMM do, yyyy')}
+            </p>
+          </div>
+          
+          {/* Built with Bolt.new Badge */}
+          <motion.a
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+            href="https://bolt.new"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-500 via-blue-500 to-cyan-500 text-white px-4 py-2 rounded-full text-sm font-medium hover:shadow-lg hover:scale-105 transition-all duration-200 group flex-shrink-0"
+          >
+            <span>Built with</span>
+            <span className="font-bold">Bolt.new</span>
+            <ExternalLink className="w-3 h-3 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform duration-200" />
+          </motion.a>
+        </div>
       </div>
 
       {/* Stats Cards */}
