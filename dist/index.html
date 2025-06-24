@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="description" content="Daily Utility App - Your all-in-one productivity suite with todo lists, notes, habit tracking, and more!" />
     <meta name="keywords" content="productivity, todo, notes, habits, timer, calculator, drawing, file manager" />
     <meta name="theme-color" content="#8B5CF6" />
@@ -13,35 +13,87 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Daily Utility" />
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
     
-    <!-- PWA Icons -->
+    <!-- Enhanced PWA Icons -->
     <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png" />
     <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
+    
+    <!-- Splash screens for iOS -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="apple-touch-startup-image" href="/icon-512.png" />
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
     
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/icon-192.png" as="image" />
+    
     <title>Daily Utility App - Your Productivity Suite</title>
-    <script type="module" crossorigin src="/assets/index-C26Rg8Sd.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-D6BkJJ2w.css">
+    <script type="module" crossorigin src="/assets/index-DiJtRA7f.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BcsE03v5.css">
   </head>
   <body>
     <div id="root"></div>
     
-    <!-- PWA Service Worker Registration -->
+    <!-- Enhanced PWA Service Worker Registration -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
             .then((registration) => {
               console.log('SW registered: ', registration);
+              
+              // Check for updates
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                if (newWorker) {
+                  newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                      // New content is available, prompt user to refresh
+                      if (confirm('New version available! Refresh to update?')) {
+                        window.location.reload();
+                      }
+                    }
+                  });
+                }
+              });
             })
             .catch((registrationError) => {
               console.log('SW registration failed: ', registrationError);
             });
         });
       }
+
+      // Handle app shortcuts
+      if ('navigator' in window && 'setAppBadge' in navigator) {
+        // Set app badge if supported
+        navigator.setAppBadge(0);
+      }
+
+      // Prevent zoom on double tap for better mobile experience
+      let lastTouchEnd = 0;
+      document.addEventListener('touchend', function (event) {
+        const now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+          event.preventDefault();
+        }
+        lastTouchEnd = now;
+      }, false);
+
+      // Handle viewport changes for mobile keyboards
+      function handleViewportChange() {
+        const viewport = document.querySelector('meta[name=viewport]');
+        if (viewport) {
+          viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover');
+        }
+      }
+
+      window.addEventListener('resize', handleViewportChange);
+      window.addEventListener('orientationchange', handleViewportChange);
     </script>
   </body>
 </html>
