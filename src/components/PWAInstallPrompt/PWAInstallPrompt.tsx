@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, X, Smartphone } from 'lucide-react';
+import { Download, X, Smartphone, Apple } from 'lucide-react';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -12,14 +12,18 @@ export const PWAInstallPrompt: React.FC = () => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
 
   useEffect(() => {
-    // Check if device is iOS
+    // Check device type
     const iOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const android = /Android/.test(navigator.userAgent);
     setIsIOS(iOS);
+    setIsAndroid(android);
 
     // Check if app is already installed (standalone mode)
-    const standalone = window.matchMedia('(display-mode: standalone)').matches;
+    const standalone = window.matchMedia('(display-mode: standalone)').matches || 
+                      (window.navigator as any).standalone === true;
     setIsStandalone(standalone);
 
     // Listen for the beforeinstallprompt event
@@ -30,13 +34,34 @@ export const PWAInstallPrompt: React.FC = () => {
       // Show prompt after a delay if not dismissed before
       setTimeout(() => {
         const dismissed = localStorage.getItem('pwa-install-dismissed');
-        if (!dismissed && !standalone) {
+        const lastDismissed = localStorage.getItem('pwa-install-last-dismissed');
+        const now = Date.now();
+        const daysSinceLastDismiss = lastDismissed ? 
+          (now - parseInt(lastDismissed)) / (1000 * 60 * 60 * 24) : 999;
+        
+        // Show again after 7 days or if never dismissed
+        if ((!dismissed || daysSinceLastDismiss > 7) && !standalone) {
           setShowPrompt(true);
         }
       }, 3000);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // For iOS, show install prompt if not standalone and not dismissed recently
+    if (iOS && !standalone) {
+      setTimeout(() => {
+        const dismissed = localStorage.getItem('pwa-install-dismissed-ios');
+        const lastDismissed = localStorage.getItem('pwa-install-last-dismissed-ios');
+        const now = Date.now();
+        const daysSinceLastDismiss = lastDismissed ? 
+          (now - parseInt(lastDismissed)) / (1000 * 60 * 60 * 24) : 999;
+        
+        if (!dismissed || daysSinceLastDismiss > 7) {
+          setShowPrompt(true);
+        }
+      }, 5000);
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -59,11 +84,19 @@ export const PWAInstallPrompt: React.FC = () => {
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    localStorage.setItem('pwa-install-dismissed', 'true');
+    const now = Date.now().toString();
+    
+    if (isIOS) {
+      localStorage.setItem('pwa-install-dismissed-ios', 'true');
+      localStorage.setItem('pwa-install-last-dismissed-ios', now);
+    } else {
+      localStorage.setItem('pwa-install-dismissed', 'true');
+      localStorage.setItem('pwa-install-last-dismissed', now);
+    }
   };
 
-  // Don't show if already installed or no prompt available
-  if (isStandalone || (!deferredPrompt && !isIOS) || !showPrompt) {
+  // Don't show if already installed
+  if (isStandalone || !showPrompt) {
     return null;
   }
 
@@ -78,20 +111,37 @@ export const PWAInstallPrompt: React.FC = () => {
         <div className="bg-white/95 backdrop-blur-xl rounded-2xl p-4 shadow-2xl border border-gray-200/50">
           <div className="flex items-start space-x-3">
             <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Smartphone className="w-6 h-6 text-white" />
+              {isIOS ? (
+                <Apple className="w-6 h-6 text-white" />
+              ) : (
+                <Smartphone className="w-6 h-6 text-white" />
+              )}
             </div>
             
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-gray-900 mb-1">Install Daily Utility</h3>
+              <h3 className="font-semibold text-gray-900 mb-1">
+                {isIOS ? 'Add to Home Screen' : 'Install Daily Utility'}
+              </h3>
               <p className="text-sm text-gray-600 mb-3">
                 {isIOS 
-                  ? 'Tap the share button and select "Add to Home Screen" to install this app.'
+                  ? 'Tap the share button (⬆️) in Safari and select "Add to Home Screen" for the best experience.'
+                  : isAndroid
+                  ? 'Install this app on your Android device for quick access and offline use!'
                   : 'Install this app on your device for a better experience!'
                 }
               </p>
               
+              {isIOS && (
+                <div className="text-xs text-gray-500 mb-3 p-2 bg-blue-50 rounded-lg">
+                  <strong>Steps:</strong><br/>
+                  1. Tap the Share button (⬆️) at the bottom<br/>
+                  2. Scroll down and tap "Add to Home Screen"<br/>
+                  3. Tap "Add" to confirm
+                </div>
+              )}
+              
               <div className="flex space-x-2">
-                {!isIOS && (
+                {!isIOS && deferredPrompt && (
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}

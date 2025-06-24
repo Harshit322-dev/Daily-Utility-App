@@ -7,6 +7,10 @@
   "background_color": "#8B5CF6",
   "theme_color": "#8B5CF6",
   "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["productivity", "utilities", "lifestyle"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-192.png",
@@ -19,21 +23,70 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "monochrome"
     }
   ],
-  "categories": ["productivity", "utilities", "lifestyle"],
   "screenshots": [
     {
       "src": "/screenshot-wide.png",
       "sizes": "1280x720",
       "type": "image/png",
-      "form_factor": "wide"
+      "form_factor": "wide",
+      "label": "Daily Utility App - Desktop View"
     },
     {
       "src": "/screenshot-narrow.png",
       "sizes": "640x1136",
       "type": "image/png",
-      "form_factor": "narrow"
+      "form_factor": "narrow",
+      "label": "Daily Utility App - Mobile View"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Add Todo",
+      "short_name": "Todo",
+      "description": "Quickly add a new todo item",
+      "url": "/?view=todos",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "New Note",
+      "short_name": "Note",
+      "description": "Create a new note",
+      "url": "/?view=notes",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Habits",
+      "short_name": "Habits",
+      "description": "Track your habits",
+      "url": "/?view=habits",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "edge_side_panel": {
+    "preferred_width": 400
+  }
 }
